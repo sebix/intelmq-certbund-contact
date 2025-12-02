@@ -25,6 +25,8 @@ intelmq-certbund-contact (1.2.0-1) UNRELEASED; urgency=medium
     * add tests for eventjson library
   * rules expert:
     * use the systems default path for configuration
+  * rulesupport:
+    * Add repr methods to Organisation and Contact classes
 
  -- Sebastian Wagner <swagner@intevation.de>  Wed, 05 Mar 2025 14:29:32 +0100
 
