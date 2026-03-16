@@ -181,11 +181,15 @@ def load_ripe_files(options) -> tuple:
 def read_delegated_file(filename, country, verbose=False):
     """Read the ASN entries from the delegated file for the given country."""
     asns = []
-    with open(filename) as f:
-        for line in f:
-            parts = line.split("|")
-            if parts[2] == "asn" and parts[1] == country:
-                asns.append("AS" + parts[3])
+    try:
+        with open(filename) as f:
+            for line in f:
+                parts = line.split("|")
+                if parts[2] == "asn" and parts[1] == country:
+                    asns.append("AS" + parts[3])
+    except FileNotFoundError:
+        echo("Could not find file 'delegated-ripencc-latest'. Are we in the correct directory?")
+        exit(1)
     print('** Loaded {} entries from delegated file {}'
           .format(len(asns), filename))
     return asns
