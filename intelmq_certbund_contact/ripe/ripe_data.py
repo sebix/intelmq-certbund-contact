@@ -81,8 +81,11 @@ def add_common_args(parser):
                               " all ASNs are imported"))
     parser.add_argument("--restrict-to-country",
                         metavar="COUNTRY_CODE",
-                        help=("A country code, e.g. DE, to restrict which"
-                              " information is actually read from the files."))
+                        nargs='+',
+                        help=("One or more country codes to"
+                              " restrict which information is actually read"
+                              " from the files. Example usage: "
+                              "--restrict-to-country DE AT CH"))
 
 
 def load_ripe_files(options) -> tuple:
@@ -108,8 +111,8 @@ def load_ripe_files(options) -> tuple:
                                                 verbose=options.verbose)
 
     def restrict_country(record):
-        country = options.restrict_to_country
-        return (not country) or country in record["country"]
+        countries = options.restrict_to_country
+        return (not countries) or any(country in record["country"] for country in countries)
 
     asn_list = parse_file(options.asn_file,
                           ('aut-num', 'org', 'status', 'abuse-c'),
@@ -178,14 +181,14 @@ def load_ripe_files(options) -> tuple:
             inetnum_list, inet6num_list)
 
 
-def read_delegated_file(filename, country, verbose=False):
+def read_delegated_file(filename, countries, verbose=False):
     """Read the ASN entries from the delegated file for the given country."""
     asns = []
     try:
         with open(filename) as f:
             for line in f:
                 parts = line.split("|")
-                if parts[2] == "asn" and parts[1] == country:
+                if parts[2] == "asn" and parts[1] in countries:
                     asns.append("AS" + parts[3])
     except FileNotFoundError:
         echo("Could not find file 'delegated-ripencc-latest'. Are we in the correct directory?")
