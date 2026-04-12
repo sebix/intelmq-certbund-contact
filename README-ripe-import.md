@@ -21,6 +21,55 @@ It is also possible to provide a whitelist of ASNs to load. Use the
 ``--asn-whitelist-file`` parameter to pass a filename. The script expects one
 AS entry per line, with the AS-prefix, e.g. ``AS123``.
 
+Configuration
+=============
+
+Parameters are resolved in the following priority order (highest first):
+
+1. **Command-line arguments**
+2. **`/etc/intelmq/contactdb-import.conf`**: optional JSON configuration
+3. **`/etc/intelmq/contactdb-serve.conf`**: the contactdb webinterface configuration is read as a fallback for the database connection (`conninfo`)
+4. **Built-in defaults**
+
+The `--help` pages show the default values or the values from the configuration files if defined.
+
+### contactdb-import.conf
+
+The file is JSON-formatted.
+Only the parameters you want to override need to be listed.
+RIPE-specific file paths live under a `"ripe"` sub-object.
+The example file `contactdb-import.conf.example` (in this repository) can be copied to `/etc/intelmq/contactdb-import.conf`.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `conninfo` | string | `"dbname=contactdb"` | libpq connection string |
+| `verbose` | boolean | `false` | Enable verbose output |
+| `ripe.organisation_file` | string | `"ripe.db.organisation.gz"` | Organisation data file |
+| `ripe.role_file` | string | `"ripe.db.role.gz"` | Role data file |
+| `ripe.asn_file` | string | `"ripe.db.aut-num.gz"` | AS number data file |
+| `ripe.inetnum_file` | string | `"ripe.db.inetnum.gz"` | inetnum data file |
+| `ripe.inet6num_file` | string | `"ripe.db.inet6num.gz"` | inet6num data file |
+| `ripe.ripe_delegated_file` | string | `"delegated-ripencc-latest"` | Delegated file for country filtering |
+| `asn_whitelist_file` | string | `""` | ASN whitelist file (empty = all ASNs) |
+| `restrict_to_country` | list of strings | `null` | Country codes to restrict import to |
+
+Example `/etc/intelmq/contactdb-import.conf`:
+```json
+{
+    "conninfo": "...",
+    "verbose": false,
+    "ripe": {
+        "organisation_file": "...",
+        ...
+    },
+    "asn_whitelist_file": "...",
+    "restrict_to_country": ["DE"]
+}
+```
+
+Usually, only `restrict_to_country` is needed.
+And `conninfo`, if it differs from the connection information for the fody webinterface.
+
 Usage
 =====
 
@@ -61,8 +110,11 @@ downloaded.
 
 ```
 cd $d
-ripe_import.py --conninfo dbname=contactdb --asn-whitelist-file=asn-DE.txt -v
+ripe_import.py --asn-whitelist-file=asn-DE.txt -v
 ```
+
+If `conninfo` and `restrict_to_country` are set in
+`/etc/intelmq/contactdb-import.conf`, no additional parameters are needed.
 
 Here is a different example where the paths to the files are specified
 explicitly:
