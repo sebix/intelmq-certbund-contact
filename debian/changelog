@@ -22,6 +22,10 @@ intelmq-certbund-contact (1.2.0-1) UNRELEASED; urgency=medium
   * RIPE import:
     * validate the db connection credentials before loading the data for faster feedback to the user
     * Add support for importing multiple countries #33
+    * Support for configuration file, making command line parameters optional (#34).
+      * Makes automation, scripting and orchestration much easier.
+      * No more credentials in the process list.
+      * Additionally read database connection from fody configuration as fallback (#25).
   * tests:
     * add rules expert unittests
     * add tests for eventjson library

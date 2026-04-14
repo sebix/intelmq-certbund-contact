@@ -21,15 +21,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
 Author(s):
     Bernhard E. Reiter <bernhard.reiter@intevation.de>
     Bernhard Herzog <bernhard.herzog@intevation.de>
+    Sebastian Wagner <sebastian.wagner@commongoodtechnology.org>
 """
 
 import collections
 import itertools
 import gzip
 import ipaddress
+import json
+import os
+import sys
 
 from re import compile as re_compile
 from itertools import chain
+from pathlib import Path
 
 from email.utils import parseaddr
 
@@ -38,54 +43,155 @@ from email.utils import parseaddr
 # More reasoning in function sanitize_role_entry and in 2auto/issue354
 _RE_EMAIL_ADDRESS = re_compile('(?:(?:".*?"|[^ ]+)@[^ ]+)')
 
+_IMPORT_CONF = Path('/etc/intelmq/contactdb-import.conf')
+_SERVE_CONF = Path('/etc/intelmq/contactdb-serve.conf')
+
+# Defaults configuration values
+_DEFAULTS = {
+    'conninfo': 'dbname=contactdb',
+    'verbose': False,
+    'ripe': {
+        'organisation_file': 'ripe.db.organisation.gz',
+        'role_file': 'ripe.db.role.gz',
+        'asn_file': 'ripe.db.aut-num.gz',
+        'inetnum_file': 'ripe.db.inetnum.gz',
+        'inet6num_file': 'ripe.db.inet6num.gz',
+        'ripe_delegated_file': 'delegated-ripencc-latest',
+    },
+    'asn_whitelist_file': None,
+    'restrict_to_country': None,
+}
+
+
+def _load_import_conf():
+    """Load /etc/intelmq/contactdb-import.conf
+
+    Returns: dict
+    """
+    if not _IMPORT_CONF.exists():
+        return {}
+    try:
+        with _IMPORT_CONF.open() as f:
+            config = json.load(f)
+    except Exception as exc:
+        print(f'Warning: could not read {_IMPORT_CONF!s}: {exc}', file=sys.stderr)
+        return {}
+
+    return config
+
+
+def _load_serve_conf():
+    """Load database conninfo from /etc/intelmq/contactdb-serve.conf
+
+    Reads 'libpg conninfo' -> conninfo
+
+    Returns: dict
+    """
+    if not _SERVE_CONF.exists():
+        return {}
+    try:
+        with _SERVE_CONF.open() as f:
+            raw = json.load(f)
+    except Exception as exc:
+        print(f'Warning: could not read {_SERVE_CONF}: {exc}', file=sys.stderr)
+        return {}
+
+    result = {}
+    if 'libpg conninfo' in raw:
+        result['conninfo'] = raw['libpg conninfo']
+    return result
+
+
+def apply_config():
+    """Merge configuration files
+
+    Priority (highest to lowest):
+      1. Command-line arguments
+      2. /etc/intelmq/contactdb-import.conf
+      3. /etc/intelmq/contactdb-serve.conf  (conninfo only)
+      4. Hard-coded defaults (_DEFAULTS)
+
+    *args* is modified in place and returned.
+    """
+    import_conf = _load_import_conf()
+    serve_conf = _load_serve_conf()
+
+    for key, value in _DEFAULTS.items():
+        # use serve config as fallback
+        if key == 'conninfo' and 'conninfo' in serve_conf:
+            _DEFAULTS['conninfo'] = serve_conf['conninfo']
+
+        # RIPE parameters
+        if key == 'ripe':
+            for ripe_key, ripe_value in value.items():
+                if key in import_conf.get('ripe', {}):
+                    _DEFAULTS['ripe'][ripe_key] = ripe_value
+
+        # all others
+        if key in import_conf:
+            _DEFAULTS[key] = import_conf[key]
+
+
+apply_config()
+
 
 def add_db_args(parser):
     parser.add_argument("--conninfo",
-                        default='dbname=contactdb',
+                        default=_DEFAULTS['conninfo'],
                         help="Libpg connection string. E.g. 'host=localhost"
-                             " port=5432 user=intelmq dbname=contactdb'")
+                             " port=5432 user=intelmq dbname=contactdb'."
+                             f" Can also be set in {_IMPORT_CONF}"
+                             f" or read from {_SERVE_CONF}"
+                             " ('libpg conninfo' key).")
 
 
 def add_common_args(parser):
+    parser.epilog = '''
+    Parameter defaults are read from the configuration files:
+    /etc/intelmq/contactdb-serve.conf (conninfo only) and
+    /etc/intelmq/contactdb-import.conf
+    '''
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
-                        default=False, action="store_true")
+                        default=_DEFAULTS['verbose'], action="store_true")
     parser.add_argument("--organisation-file",
-                        default='ripe.db.organisation.gz',
-                        help=("Specify the organisation data file."))
+                        default=_DEFAULTS['ripe']['organisation_file'],
+                        help="Specify the organisation data file.")
     parser.add_argument("--role-file",
-                        default='ripe.db.role.gz',
-                        help=("Specify the contact role data file."))
+                        default=_DEFAULTS['ripe']['role_file'],
+                        help="Specify the contact role data file.")
     parser.add_argument("--asn-file",
-                        default='ripe.db.aut-num.gz',
-                        help=("Specify the AS number data file."))
+                        default=_DEFAULTS['ripe']['asn_file'],
+                        help="Specify the AS number data file.")
     parser.add_argument("--inetnum-file",
-                        default='ripe.db.inetnum.gz',
-                        help=("Specify the inetnum data file."))
+                        default=_DEFAULTS['ripe']['inetnum_file'],
+                        help="Specify the inetnum data file.")
     parser.add_argument("--inet6num-file",
-                        default='ripe.db.inet6num.gz',
-                        help=("Specify the inet6num data file."))
+                        default=_DEFAULTS['ripe']['inet6num_file'],
+                        help="Specify the inet6num data file.")
     parser.add_argument("--ripe-delegated-file",
-                        default='delegated-ripencc-latest',
-                        help=("Name of the delegated-ripencc-latest file to"
-                              " read. Only needed for --restrict-to-country."
-                              " In that case this file is"
-                              " read and only the ASNs given in the file"
-                              " that match the country code from"
-                              " --restrict-to-country are imported."
-                              " If --asn-whitelist-file is also given it"
-                              " takes precedence"))
+                        default=_DEFAULTS['ripe']['ripe_delegated_file'],
+                        help="Name of the delegated-ripencc-latest file to"
+                             " read. Only needed for --restrict-to-country."
+                             " In that case this file is"
+                             " read and only the ASNs given in the file"
+                             " that match the country code from"
+                             " --restrict-to-country are imported."
+                             " If --asn-whitelist-file is also given it"
+                             " takes precedence.")
     parser.add_argument("--asn-whitelist-file",
-                        default='',
-                        help=("A file name with a whitelist of ASNs."
-                              " If this option is not set,"
-                              " all ASNs are imported"))
+                        default=_DEFAULTS['asn_whitelist_file'],
+                        help="A file name with a whitelist of ASNs."
+                             " If this option is not set,"
+                             " all ASNs are imported.")
     parser.add_argument("--restrict-to-country",
                         metavar="COUNTRY_CODE",
                         nargs='+',
-                        help=("One or more country codes to"
-                              " restrict which information is actually read"
-                              " from the files. Example usage: "
-                              "--restrict-to-country DE AT CH"))
+                        default=_DEFAULTS['restrict_to_country'],
+                        help="One or more country codes to"
+                             " restrict which information is actually read"
+                             " from the files. Example usage: "
+                             "--restrict-to-country DE AT CH."
+                             f" Can also be set in {_IMPORT_CONF}.")
 
 
 def load_ripe_files(options) -> tuple:
