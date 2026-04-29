@@ -26,6 +26,7 @@ intelmq-certbund-contact (1.2.0-1) UNRELEASED; urgency=medium
       * Makes automation, scripting and orchestration much easier.
       * No more credentials in the process list.
       * Additionally read database connection from fody configuration as fallback (#25).
+    * New bash script to download and update the RIPE data (#36).
   * tests:
     * add rules expert unittests
     * add tests for eventjson library

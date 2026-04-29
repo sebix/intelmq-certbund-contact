@@ -134,6 +134,18 @@ Also see the
 The [documentation on environment variables](https://www.postgresql.org/docs/current/static/libpq-envars.html) to the connection also
 points towards how to safely provide a password with a ~/.pgpass file.
 
+### Automate updates
+
+The script `ripe_update` performs all required steps:
+1. Create a temporary directory
+2. Downloads the latest RIPE data
+3. Analyse the difference of the new data with the database
+   In automation with cron, this information will be sent to the system administrator automatically
+4. Import the new data
+5. Cleanup the temporary data with the downloaded RIPE file (also in case of errors)
+
+It is usually enough to run this step once ever week, but it depends on the exact use case.
+
 ### use as a module
 `check-ripe.py` is a simple example how to use the module
 `ripe_data` independently of intelmq to write a simple check
