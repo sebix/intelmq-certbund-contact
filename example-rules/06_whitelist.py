@@ -26,6 +26,10 @@ WHITELIST_TAGS = {
         "field": "classification.type",
         "values": ["infected-system"]
     },
+    "Whitelist:Vulnerable-HTTP": {
+        "field": "classification.type",
+        "values": ["infected-system"]
+    },
     "Whitelist:DNS-Open-Resolver": {
         "field": "classification.identifier",
         "values": ["dns-open-resolver"]
@@ -36,20 +40,22 @@ WHITELIST_TAGS = {
     },
     "Whitelist:Shadowserver": {
         "field": "feed.provider",
-        "values": ["Shadowserver"]
+        "values": ["shadowserver"]
     },
 }
 
 
 def determine_directives(context):
+    context.logger.debug("============= 06_whitelist.py ===========")
     inhibited = False
-    if notification_inhibited(context):
+    if notification_inhibited(context):  # check inhibitions
         # According to annotations, no notifications should be sent.
         # Assuming this script is run before any notification directives
         # are added to the context, we can simply return True to
         # indicate that no more rules should be processed to inhibit all
         # notifications for this event.
         inhibited = True
+        context.logger.debug("Inhibited by inhibition.")
     if not inhibited and inhibited_by_tag(context):
         # According to the Tags of the Organisation or Network
         # This event should not be reported.
@@ -73,12 +79,14 @@ def inhibited_by_tag(context):
             tags.add(a.tag)
 
     if "Whitelist:All" in tags:
+        context.logger.debug("Inhibited by tag 'Whitelist:All'.")
         return True
 
     for t in tags.intersection(WHITELIST_TAGS):
         field = WHITELIST_TAGS[t]["field"]
         values = WHITELIST_TAGS[t]["values"]
         if context.get(field) in values:
+            context.logger.debug("Inhibited by tag %r.", t)
             return True
 
     return False

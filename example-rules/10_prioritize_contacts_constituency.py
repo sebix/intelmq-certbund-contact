@@ -8,6 +8,8 @@ Do some debug output
 """
 
 from collections import defaultdict
+from itertools import chain
+from typing import List
 import ipaddress
 
 
@@ -54,7 +56,7 @@ class MatchSelector:
         for match in matches:
             self.by_field[match.field][match.managed].add(match)
 
-    def get_preferred_by_field(self, field):
+    def get_preferred_by_field(self, field) -> set:
         """Get the preferred matches for the given field.
 
         If both manually and automatically managed matches are present,
@@ -86,15 +88,19 @@ class MatchSelector:
         return result
 
 
-def most_specific_cidr_matches(matches):
-    by_mask_len = defaultdict(list)
+def most_specific_cidr_matches(matches: List["Match"], context) -> set("Match"):
+    """
+    For a bunch of IP matches, return the ones with the longest (most specific) mask.
+    If mutliple matches have the same netmask, choose both.
+    """
+    by_mask_len = defaultdict(set)
     for match in matches:
-        by_mask_len[ipaddress.ip_network(match.address).prefixlen].append(match)
+        by_mask_len[ipaddress.ip_network(match.address).prefixlen].add(match)
     sorted_by_mask_len = sorted(by_mask_len.items())
     if sorted_by_mask_len:
         return sorted_by_mask_len[-1][-1]
     else:
-        return []
+        return set()
 
 
 def match_recipients(context, match):
@@ -115,13 +121,14 @@ def interesting_cidr_matches(context, selector):
                          for address in match_recipients(context, match))
     return set(match
                for match in most_specific_cidr_matches(
-                   selector.by_field["ip"]["automatic"])
+                   selector.by_field["ip"]["automatic"], context)
                if not asn_recipients & match_recipients(context, match))
 
 
 def determine_directives(context):
-    context.logger.debug("============= 20prioritize_contacts.py ===========")
+    context.logger.debug("============= 10_prioritize_contacts.py ===========")
 
+    # if one recipient has a tag, remove all the other recpients to prevent sharing data to others
     constituency_orgs = constituency_organisations(context.organisations)
     if constituency_orgs:
         context.logger.debug("At least one Constituency organisation detected, removing all others.")
@@ -129,17 +136,33 @@ def determine_directives(context):
 
     selector = MatchSelector(context.matches)
 
-    preferred_as_matches = selector.get_preferred_by_field("asn")
-    preferred_ip_matches = (selector.by_field["ip"]["manual"]
-                            or interesting_cidr_matches(context, selector))
+    # manual if it exists, else automatic
+    preferred_as_matches: set(Match) = selector.get_preferred_by_field("asn")
+    # get all manual CIDR matches
+    manual_contacts = selector.by_field["ip"]["manual"]
+    # get most specific automatic CIDR matches that are not identical to an ASN match
+    automatic_most_specific = interesting_cidr_matches(context, selector)
+    preferred_ip_matches: set(Match) = (
+        manual_contacts  # manual most specific
+        or automatic_most_specific)  # automatic most specific
+    context.logger.debug('most_specific_cidr_matches: %r', most_specific_cidr_matches(selector.by_field["ip"]["manual"], context))
+    context.logger.debug('interesting_cidr_matches: %r', interesting_cidr_matches(context, selector))
 
-    # preferring CIDR over AS
-    matches = preferred_ip_matches or preferred_as_matches
+    # CIDR has priority over AS
+    matches: set(Match) = preferred_ip_matches or preferred_as_matches
+    # Debug Logging
+    if preferred_ip_matches and preferred_as_matches:
+        context.logger.debug('Ignoring AS matches')
+    elif preferred_ip_matches and not preferred_as_matches:
+        context.logger.debug('Use IP matches, as no AS matches left')
+    elif not preferred_ip_matches:
+        context.logger.debug('No IP matches found, use AS matches')
 
     if not constituency_orgs:
         matches |= selector.get_preferred_by_field("geolocation.cc")
 
-    org_ids = set(i for match in matches for i in match.organisations)
+    # reorder matches and remove any unreferences organisations
+    org_ids: set(int) = set(i for match in matches for i in match.organisations)
     context.matches = list(matches)
     context.organisations = [org for org in context.organisations
                              if org.orgid in org_ids]

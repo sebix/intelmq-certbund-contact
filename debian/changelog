@@ -4,9 +4,13 @@ intelmq-certbund-contact (1.2.0-1) UNRELEASED; urgency=medium
     * use https://docs.intelmq.org/latest/dev/extensions-packages/
     * instead of hand-crafted installation
     * also allows us to execute our tests easily
-  * add example rules:
+  * example rules:
      * to prioritize by constituency
      * generic rule to create directives
+     * consistent naming with 00_name.py
+     * add more debug output for learning and analysis
+     * add new rule 05_meta for target groups
+     * rewrite some rules for more clarity (#37)
   * contact expert: merge identical matches
     * the search result can return multiple organisations with the same match
     * instead of adding both match objects independently, merge them and link
@@ -34,7 +38,7 @@ intelmq-certbund-contact (1.2.0-1) UNRELEASED; urgency=medium
   * rulesupport:
     * Add repr methods to Organisation and Contact classes
   * packages:
-    * include example rules in documentation
+    * include example rules in documentation (#31)
 
  -- Sebastian Wagner <swagner@intevation.de>  Wed, 05 Mar 2025 14:29:32 +0100
 
