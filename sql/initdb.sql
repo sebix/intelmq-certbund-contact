@@ -11,7 +11,7 @@ CREATE TEMP TABLE automatic_templ (
 
 /* Sector to classify organisations.
 */
-CREATE TABLE sector (
+CREATE TABLE IF NOT EXISTS sector (
   sector_id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL
 );
@@ -47,7 +47,7 @@ CREATE TEMP TABLE organisation_templ (
 );
 
 
-CREATE TABLE organisation (
+CREATE TABLE IF NOT EXISTS organisation (
     organisation_id SERIAL PRIMARY KEY,
     LIKE organisation_templ INCLUDING ALL,
 
@@ -55,7 +55,7 @@ CREATE TABLE organisation (
 );
 
 
-CREATE TABLE organisation_automatic (
+CREATE TABLE IF NOT EXISTS organisation_automatic (
     organisation_automatic_id SERIAL PRIMARY KEY,
     LIKE organisation_templ INCLUDING ALL,
     LIKE automatic_templ INCLUDING ALL,
@@ -64,7 +64,7 @@ CREATE TABLE organisation_automatic (
 );
 
 
-CREATE TABLE organisation_annotation (
+CREATE TABLE IF NOT EXISTS organisation_annotation (
     organisation_annotation_id SERIAL PRIMARY KEY,
     organisation_id INTEGER NOT NULL,
     annotation JSONB NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE organisation_annotation (
     FOREIGN KEY (organisation_id) REFERENCES organisation(organisation_id)
 );
 
-CREATE INDEX organisation_annotation_organisation_idx
+CREATE INDEX IF NOT EXISTS organisation_annotation_organisation_idx
           ON organisation_annotation (organisation_id);
 
 
@@ -94,7 +94,7 @@ CREATE TEMP TABLE contact_templ (
 );
 
 
-CREATE TABLE contact (
+CREATE TABLE IF NOT EXISTS contact (
     contact_id SERIAL PRIMARY KEY,
     LIKE contact_templ INCLUDING ALL,
     organisation_id INTEGER NOT NULL,
@@ -102,10 +102,10 @@ CREATE TABLE contact (
     FOREIGN KEY (organisation_id) REFERENCES organisation (organisation_id)
 );
 
-CREATE INDEX contact_organisation_idx ON contact (organisation_id);
+CREATE INDEX IF NOT EXISTS contact_organisation_idx ON contact (organisation_id);
 
 
-CREATE TABLE contact_automatic (
+CREATE TABLE IF NOT EXISTS contact_automatic (
     contact_automatic_id SERIAL PRIMARY KEY,
     LIKE contact_templ INCLUDING ALL,
     LIKE automatic_templ INCLUDING ALL,
@@ -115,7 +115,7 @@ CREATE TABLE contact_automatic (
      REFERENCES organisation_automatic (organisation_automatic_id)
 );
 
-CREATE INDEX contact_automatic_organisation_idx
+CREATE INDEX IF NOT EXISTS contact_automatic_organisation_idx
           ON contact_automatic (organisation_automatic_id);
 
 /*
@@ -124,13 +124,13 @@ CREATE INDEX contact_automatic_organisation_idx
 */
 
 -- Annotations for autonomous systems
-CREATE TABLE autonomous_system_annotation (
+CREATE TABLE IF NOT EXISTS autonomous_system_annotation (
     autonomous_system_annotation_id SERIAL PRIMARY KEY,
     asn BIGINT NOT NULL,
     annotation JSONB NOT NULL
 );
 
-CREATE INDEX autonomous_system_annotation_asn_idx
+CREATE INDEX IF NOT EXISTS autonomous_system_annotation_asn_idx
           ON autonomous_system_annotation (asn);
 
 
@@ -144,12 +144,12 @@ CREATE TEMP TABLE network_templ (
 );
 
 
-CREATE TABLE network (
+CREATE TABLE IF NOT EXISTS network (
     network_id SERIAL PRIMARY KEY,
     LIKE network_templ INCLUDING ALL
 );
 
-CREATE TABLE network_automatic (
+CREATE TABLE IF NOT EXISTS network_automatic (
     network_automatic_id SERIAL PRIMARY KEY,
     LIKE network_templ INCLUDING ALL,
     LIKE automatic_templ INCLUDING ALL,
@@ -179,22 +179,22 @@ CREATE TABLE network_automatic (
 -- XXX COMMENT Aaron: please let's simply depend on postgresql >= 9.4
 -- IMHO that's okay to demand this XXX
 --
-CREATE INDEX network_cidr_lower_idx
+CREATE INDEX IF NOT EXISTS network_cidr_lower_idx
           ON network ((inet(host(network(address)))));
-CREATE INDEX network_cidr_upper_idx
+CREATE INDEX IF NOT EXISTS network_cidr_upper_idx
           ON network ((inet(host(broadcast(address)))));
 
-CREATE INDEX network_automatic_cidr_lower_idx
+CREATE INDEX IF NOT EXISTS network_automatic_cidr_lower_idx
           ON network_automatic ((inet(host(network(address)))));
-CREATE INDEX network_automatic_cidr_upper_idx
+CREATE INDEX IF NOT EXISTS network_automatic_cidr_upper_idx
           ON network_automatic ((inet(host(broadcast(address)))));
 
-CREATE INDEX network_automatic_cidr_gist_idx ON network_automatic
+CREATE INDEX IF NOT EXISTS network_automatic_cidr_gist_idx ON network_automatic
        USING gist (address inet_ops);
 
 
 -- Annotations for networks
-CREATE TABLE network_annotation (
+CREATE TABLE IF NOT EXISTS network_annotation (
     network_annotation_id SERIAL PRIMARY KEY,
     network_id INTEGER NOT NULL,
     annotation JSONB NOT NULL,
@@ -202,7 +202,7 @@ CREATE TABLE network_annotation (
     FOREIGN KEY (network_id) REFERENCES network(network_id)
 );
 
-CREATE INDEX network_annotation_network_idx
+CREATE INDEX IF NOT EXISTS network_annotation_network_idx
           ON network_annotation (network_id);
 
 
@@ -217,15 +217,15 @@ CREATE TEMP TABLE fqdn_templ (
 );
 
 
-CREATE TABLE fqdn (
+CREATE TABLE IF NOT EXISTS fqdn (
     fqdn_id SERIAL PRIMARY KEY,
     LIKE fqdn_templ INCLUDING ALL
 );
 
-CREATE INDEX fqdn_fqdn_idx ON fqdn (fqdn);
+CREATE INDEX IF NOT EXISTS fqdn_fqdn_idx ON fqdn (fqdn);
 
 
-CREATE TABLE fqdn_automatic (
+CREATE TABLE IF NOT EXISTS fqdn_automatic (
     fqdn_automatic_id SERIAL PRIMARY KEY,
     LIKE fqdn_templ INCLUDING ALL,
     LIKE automatic_templ INCLUDING ALL,
@@ -234,7 +234,7 @@ CREATE TABLE fqdn_automatic (
 );
 
 
-CREATE TABLE fqdn_annotation (
+CREATE TABLE IF NOT EXISTS fqdn_annotation (
     fqdn_annotation_id SERIAL PRIMARY KEY,
     fqdn_id INTEGER NOT NULL,
     annotation JSONB NOT NULL,
@@ -242,7 +242,7 @@ CREATE TABLE fqdn_annotation (
     FOREIGN KEY (fqdn_id) REFERENCES fqdn(fqdn_id)
 );
 
-CREATE INDEX fqdn_annotation_fqdn_idx
+CREATE INDEX IF NOT EXISTS fqdn_annotation_fqdn_idx
           ON fqdn_annotation (fqdn_id);
 
 
@@ -259,7 +259,7 @@ CREATE TEMP TABLE national_cert_templ (
 );
 
 
-CREATE TABLE national_cert (
+CREATE TABLE IF NOT EXISTS national_cert (
     national_cert_id SERIAL PRIMARY KEY,
     LIKE national_cert_templ INCLUDING ALL,
 
@@ -269,12 +269,12 @@ CREATE TABLE national_cert (
     FOREIGN KEY (organisation_id) REFERENCES organisation (organisation_id)
 );
 
-CREATE INDEX national_cert_country_code_idx
+CREATE INDEX IF NOT EXISTS national_cert_country_code_idx
           ON national_cert (country_code);
 
 
 -- Like national_cert but for automatically maintained data.
-CREATE TABLE national_cert_automatic (
+CREATE TABLE IF NOT EXISTS national_cert_automatic (
     national_cert_automatic_id SERIAL PRIMARY KEY,
     LIKE national_cert_templ INCLUDING ALL,
 
@@ -286,7 +286,7 @@ CREATE TABLE national_cert_automatic (
      REFERENCES organisation_automatic (organisation_automatic_id)
 );
 
-CREATE INDEX national_cert_automatic_country_code_idx
+CREATE INDEX IF NOT EXISTS national_cert_automatic_country_code_idx
           ON national_cert_automatic (country_code);
 
 
@@ -295,7 +295,7 @@ CREATE INDEX national_cert_automatic_country_code_idx
  Some of them (contact_to_X) carry an additional column TTL
  See also https://www.ripe.net/manage-ips-and-asns/db/support/documentation/ripe-database-documentation/ripe-database-structure/3-1-list-of-primary-objects
 */
-CREATE TABLE organisation_to_asn (
+CREATE TABLE IF NOT EXISTS organisation_to_asn (
     organisation_id INTEGER,
     asn BIGINT,
 
@@ -304,11 +304,11 @@ CREATE TABLE organisation_to_asn (
     FOREIGN KEY (organisation_id) REFERENCES organisation (organisation_id)
 );
 
-CREATE INDEX organisation_to_asn_asn_idx
+CREATE INDEX IF NOT EXISTS organisation_to_asn_asn_idx
     ON organisation_to_asn (asn);
 
 
-CREATE TABLE organisation_to_asn_automatic (
+CREATE TABLE IF NOT EXISTS organisation_to_asn_automatic (
     organisation_automatic_id INTEGER,
     asn BIGINT,
     LIKE automatic_templ INCLUDING ALL,
@@ -318,11 +318,11 @@ CREATE TABLE organisation_to_asn_automatic (
      REFERENCES organisation_automatic (organisation_automatic_id)
 );
 
-CREATE INDEX organisation_to_asn_automatic_asn_idx
+CREATE INDEX IF NOT EXISTS organisation_to_asn_automatic_asn_idx
     ON organisation_to_asn_automatic (asn);
 
 
-CREATE TABLE organisation_to_network (
+CREATE TABLE IF NOT EXISTS organisation_to_network (
     organisation_id INTEGER,
     network_id INTEGER,
 
@@ -332,7 +332,7 @@ CREATE TABLE organisation_to_network (
     FOREIGN KEY (network_id) REFERENCES network (network_id)
 );
 
-CREATE TABLE organisation_to_network_automatic (
+CREATE TABLE IF NOT EXISTS organisation_to_network_automatic (
     organisation_automatic_id INTEGER,
     network_automatic_id INTEGER,
     LIKE automatic_templ INCLUDING ALL,
@@ -346,7 +346,7 @@ CREATE TABLE organisation_to_network_automatic (
 );
 
 
-CREATE TABLE organisation_to_fqdn (
+CREATE TABLE IF NOT EXISTS organisation_to_fqdn (
     organisation_id INTEGER,
     fqdn_id INTEGER,
 
@@ -356,7 +356,7 @@ CREATE TABLE organisation_to_fqdn (
     FOREIGN KEY (fqdn_id) REFERENCES fqdn (fqdn_id)
 );
 
-CREATE TABLE organisation_to_fqdn_automatic (
+CREATE TABLE IF NOT EXISTS organisation_to_fqdn_automatic (
     organisation_automatic_id INTEGER,
     fqdn_automatic_id INTEGER,
     LIKE automatic_templ INCLUDING ALL,
@@ -374,7 +374,7 @@ CREATE TABLE organisation_to_fqdn_automatic (
 -- Table to hold known status information about an email address. If no
 -- status information is known, there is no entry in the table, which
 -- means the email is enabled.
-CREATE TABLE email_status (
+CREATE TABLE IF NOT EXISTS email_status (
     email VARCHAR(100) PRIMARY KEY,
     enabled BOOLEAN NOT NULL,
     added TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -384,7 +384,7 @@ CREATE TABLE email_status (
 -- Tags for email addresses. These apply to any email address, including
 -- in particular email addresses of automatically maintained contacts.
 
-CREATE TABLE tag_name (
+CREATE TABLE IF NOT EXISTS tag_name (
     tag_name_id SERIAL PRIMARY KEY,
     tag_name TEXT NOT NULL,
     tag_name_order INTEGER NOT NULL,
@@ -392,7 +392,7 @@ CREATE TABLE tag_name (
     UNIQUE (tag_name)
 );
 
-CREATE TABLE tag (
+CREATE TABLE IF NOT EXISTS tag (
     tag_id SERIAL PRIMARY KEY,
     tag_name_id INTEGER NOT NULL,
     tag_value TEXT NOT NULL,
@@ -405,12 +405,12 @@ CREATE TABLE tag (
 
 -- Unique index to ensure that for each tag_name, there's at most one
 -- tag marked as default.
-CREATE UNIQUE INDEX tag_unique_default_tags_idx
+CREATE UNIQUE INDEX IF NOT EXISTS tag_unique_default_tags_idx
     ON tag (tag_name_id)
  WHERE is_default;
 
 
-CREATE TABLE email_tag (
+CREATE TABLE IF NOT EXISTS email_tag (
     email VARCHAR(100) NOT NULL,
     tag_id INTEGER NOT NULL,
 
@@ -420,13 +420,13 @@ CREATE TABLE email_tag (
 );
 
 
-CREATE INDEX email_tag_email_idx
+CREATE INDEX IF NOT EXISTS email_tag_email_idx
           ON email_tag (email);
 
 
 -- View to present the tags as annotations so that the contact bot only
 -- has to deal with annotations.
-CREATE VIEW email_annotation (email, annotation)
+CREATE OR REPLACE VIEW email_annotation (email, annotation)
   AS SELECT email,
             json_build_object('tag', tag_name || ':' || tag_value)
        FROM email_tag
@@ -473,7 +473,7 @@ $$ LANGUAGE plpgsql STABLE;
 
 
 -- Audit log table for all changes made in fody or other scripts changing the database
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     log_id SERIAL PRIMARY KEY,
     time TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
     "table" VARCHAR(50) NOT NULL,
