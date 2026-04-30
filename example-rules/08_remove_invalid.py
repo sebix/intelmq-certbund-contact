@@ -1,4 +1,5 @@
-"""Remove invalid contact information.
+"""
+Remove invalid contact information.
 
 Invalid contact information are:
 
@@ -13,7 +14,7 @@ contacts have a non-empty email address.
 
 
 def determine_directives(context):
-    context.logger.debug("============= 03remove-invalid.py ===========")
+    context.logger.debug("============= 08_remove-invalid.py ===========")
     valid_organisations = []
     context.logger.debug("All matches: %r", context.matches)
     for org in context.organisations:
@@ -21,4 +22,6 @@ def determine_directives(context):
                         if contact.email and contact.email_status == "enabled" ]
         if org.contacts:
             valid_organisations.append(org)
+    if context.organisations != valid_organisations:
+        context.logger.info('Removed invalid organisations or contacts.')
     context.organisations = valid_organisations
