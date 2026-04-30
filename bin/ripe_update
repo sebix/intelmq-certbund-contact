@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+
+tmp_dir=$(mktemp -d)
+
+function cleanup {
+    cd "$HOME"
+    rm -r "$tmp_dir"
+}
+trap cleanup EXIT  # also covers exits in case of errors
+
+cd "$tmp_dir"
+chronic ripe_download
+cd "$(date +%F)"
+
+ripe_diff
+chronic ripe_import

@@ -30,5 +30,6 @@ setup(
                  ' with related expert bots'),
     entry_points={'console_scripts': ENTRY_POINTS},
     scripts=["bin/ripe_download",
-             "bin/import-national-certs"],
+             "bin/import-national-certs",
+             "bin/ripe_update"],
 )
