@@ -1,5 +1,14 @@
 BEGIN;
 
+CREATE ROLE IF NOT EXISTS contactdb_owner
+    NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB CREATEROLE;
+CREATE ROLE IF NOT EXISTS contactdb_ro
+    NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB CREATEROLE;
+CREATE ROLE IF NOT EXISTS contactdb_rw
+    NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB CREATEROLE;
+
+SET ROLE contactdb_owner;
+
 /*
  Template table containing with elements for automatic tables
  */
@@ -484,5 +493,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
     "before" JSONB,
     "after" JSONB
 );
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO contactdb_rw;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO contactdb_rw;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO contactdb_ro;
+
+GRANT contactdb_ro TO intelmq;
+GRANT contactdb_rw TO fody;
 
 COMMIT;

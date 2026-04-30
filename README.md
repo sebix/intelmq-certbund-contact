@@ -164,13 +164,20 @@ createdb --encoding=UTF8 --template=template0 contactdb
 psql -f /usr/share/intelmq-certbund-contact/sql/initdb.sql contactdb
 ```
 
-A database user with the right to select the data in the Contact DB
+A database user (`intelmq`) with the right to select the data in the Contact DB
 must be created.  This is the account, which will be used in the bot's
 configuration for accessing the database.
 
+Also, a database user (`fody`) with write permissions on the tables
+must be created. This account can be used for the fody backend
+configuration (`/etc/intelmq/contactdb_server.conf`) and the RIPE
+Update Script.
+
 ```bash
 createuser intelmq --pwprompt
-psql -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO intelmq;" contactdb
+psql -c "GRANT contactdb_ro TO intelmq;" contactdb
+createuser fody --pwprompt
+psql -c "GRANT contactdb_rw TO intelmq;" contactdb
 ```
 
 #### Adding default email tags
